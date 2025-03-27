@@ -1,0 +1,136 @@
+#include <allegro.h>
+#include <stdio.h>
+#include <math.h>
+
+void initialisation_allegro();
+
+int main()
+{
+    BITMAP* buffer_fond;
+    BITMAP* fond;
+    BITMAP* eau;
+    BITMAP* rabbit[7];
+    BITMAP* rabbit_redimensionne;
+    BITMAP* poisson;
+    BITMAP* poisson_redimensionne;
+    int x_rabbit = 100, y_rabbit = 370;
+    int x_poisson = SCREEN_W ;
+    int y_poisson_base = 700;
+    int direction_rabbit = 5;
+    int direction_poisson = -5;
+    int frame = 0;
+    float angle = 0;
+    int poisson_flip = 1;
+    int frame_counter = 0;  // Compteur pour gérer l'intervalle entre les frames du lapin
+    int frame_delay = 5;  // Délai en nombre de cycles d'animation entre les changements de frame du lapin
+
+    // Initialisation d'Allegro et du mode graphique
+    initialisation_allegro();
+
+    // Chargement des images
+    fond = load_bitmap("fond.bmp", NULL);
+    eau = load_bitmap("glace.bmp", NULL);
+    poisson = load_bitmap("poisson.bmp", NULL);
+    for (int i = 0; i < 7; i++) {
+        char filename[20];
+        sprintf(filename, "rabbit_%d.bmp", i + 1);
+        rabbit[i] = load_bitmap(filename, NULL);
+        if (!rabbit[i]) {
+            allegro_message("Erreur de chargement de l'image %s !", filename);
+            allegro_exit();
+            return -1;
+        }
+    }
+
+    if (!fond || !eau || !poisson)
+    {
+        allegro_message("Erreur de chargement des images !");
+        allegro_exit();
+        return -1;
+    }
+
+
+    buffer_fond = create_bitmap(SCREEN_W, SCREEN_H);
+
+
+    rabbit_redimensionne = create_bitmap(rabbit[0]->w * 2, rabbit[0]->h * 2);
+    poisson_redimensionne = create_bitmap(poisson->w * 0.5, poisson->h * 0.5);
+
+    // Boucle d'animation
+    while (!key[KEY_ESC])
+    {
+
+        stretch_blit(fond, buffer_fond, 0, 0, fond->w, fond->h, 0, 0, SCREEN_W, 2 * SCREEN_H / 3);
+        stretch_blit(eau, buffer_fond, 0, 0, eau->w, eau->h, 0, 2 * SCREEN_H / 3, SCREEN_W, SCREEN_H / 2);
+
+        stretch_blit(rabbit[frame], rabbit_redimensionne, 0, 0, rabbit[frame]->w, rabbit[frame]->h, 0, 0, rabbit[frame]->w * 2, rabbit[frame]->h * 2);
+        draw_sprite(buffer_fond, rabbit_redimensionne, x_rabbit, y_rabbit);
+
+
+        int y_poisson = y_poisson_base + 20 * sin(angle);
+
+        stretch_blit(poisson, poisson_redimensionne, 0, 0, poisson->w, poisson->h, 0, 0, poisson->w * 0.5, poisson->h * 0.5);
+
+        if (poisson_flip) {
+            draw_sprite_h_flip(buffer_fond, poisson_redimensionne, x_poisson, y_poisson);
+        } else {
+            draw_sprite(buffer_fond, poisson_redimensionne, x_poisson, y_poisson);
+        }
+
+        blit(buffer_fond, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
+
+        // Déplacement du lapin
+        x_rabbit += direction_rabbit;
+        if (x_rabbit > SCREEN_W) x_rabbit = -rabbit_redimensionne->w;
+
+        // Déplacement du poisson
+        x_poisson += direction_poisson;
+        if (x_poisson < -poisson_redimensionne->w || x_poisson > SCREEN_W) {
+            direction_poisson = -direction_poisson;
+            poisson_flip = !poisson_flip;
+        }
+
+        angle += 0.1;
+        if (angle > 2 * M_PI) angle -= 2 * M_PI;
+
+        // Changer de frame pour le lapin après un certain nombre de cycles d'animation
+        frame_counter++;
+        if (frame_counter >= frame_delay) {
+            frame = (frame + 1) % 7;
+            frame_counter = 0;
+        }
+
+        rest(20);
+    }
+
+    // Libération de la mémoire
+    destroy_bitmap(fond);
+    destroy_bitmap(eau);
+    destroy_bitmap(buffer_fond);
+    for (int i = 0; i < 7; i++) {
+        destroy_bitmap(rabbit[i]);
+    }
+    destroy_bitmap(poisson);
+    destroy_bitmap(rabbit_redimensionne);
+    destroy_bitmap(poisson_redimensionne);
+
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN();
+
+void initialisation_allegro()
+{
+    allegro_init();
+    install_keyboard();
+    install_mouse();
+
+    set_color_depth(desktop_color_depth());
+
+    if (set_gfx_mode(GFX_AUTODETECT_WINDOWED, 1500, 1000, 0, 0) != 0)
+    {
+        allegro_message("Problème avec le mode graphique");
+        allegro_exit();
+        exit(EXIT_FAILURE);
+    }
+}
